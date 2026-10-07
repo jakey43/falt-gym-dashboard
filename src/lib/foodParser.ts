@@ -106,7 +106,7 @@ function parseNumber(s: string): number | null {
 // en siffra startar en ny rad, annars är det en beskrivning ("sötpotatis, rå").
 export function splitQuery(input: string): string[] {
   return input
-    .split(/\n|;|\+|(?<!\p{L})och(?!\p{L})|,(?=\s*\d)/iu)
+    .split(/\n|;|\+|(?:^|[^\p{L}])och(?=[^\p{L}]|$)|,(?=\s*\d)/iu)
     .map((s) => s.trim())
     .filter(Boolean);
 }

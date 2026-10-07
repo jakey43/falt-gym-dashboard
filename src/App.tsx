@@ -1,6 +1,7 @@
 import { HashRouter, Link, NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { StoreProvider, useStore } from "./lib/store";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { IconBowl, IconDumbbell, IconHome, IconSearch, IconSettings, IconTrend } from "./components/icons";
 import Overview from "./pages/Overview";
 import Training from "./pages/Training";
@@ -77,10 +78,12 @@ function Shell() {
 
 export default function App() {
   return (
-    <StoreProvider>
-      <HashRouter>
-        <Shell />
-      </HashRouter>
-    </StoreProvider>
+    <ErrorBoundary>
+      <StoreProvider>
+        <HashRouter>
+          <Shell />
+        </HashRouter>
+      </StoreProvider>
+    </ErrorBoundary>
   );
 }

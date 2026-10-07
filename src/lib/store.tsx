@@ -39,6 +39,20 @@ const EMPTY: AppData = {
 
 const KEY = "falt:data:v1";
 
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+
+// Sparad data kan komma från en äldre version eller en trasig backup – fyll i det som saknas.
+function sanitize(stored: Partial<AppData>): AppData {
+  return {
+    sets: Array.isArray(stored.sets) ? stored.sets.filter((s) => isObj(s) && typeof s.start === "string" && typeof s.exercise === "string") : [],
+    days: isObj(stored.days) ? (stored.days as AppData["days"]) : {},
+    weights: Array.isArray(stored.weights) ? stored.weights.filter((w) => isObj(w) && typeof w.date === "string" && typeof w.kg === "number") : [],
+    goals: { ...DEFAULT_GOALS, ...(isObj(stored.goals) ? stored.goals : {}), micro: isObj(stored.goals?.micro) ? stored.goals!.micro : {} },
+    overrides: isObj(stored.overrides) ? (stored.overrides as AppData["overrides"]) : {},
+    settings: { ...EMPTY.settings, ...(isObj(stored.settings) ? stored.settings : {}) },
+  };
+}
+
 interface Store {
   data: AppData;
   workouts: Workout[];
@@ -56,7 +70,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     get<AppData>(KEY)
       .then((stored) => {
-        if (stored) setData({ ...EMPTY, ...stored, goals: { ...DEFAULT_GOALS, ...stored.goals }, settings: { ...EMPTY.settings, ...stored.settings } });
+        if (stored && typeof stored === "object") setData(sanitize(stored));
       })
       .catch(() => {})
       .finally(() => setLoaded(true));
@@ -67,7 +81,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [data, loaded]);
 
   const update = useCallback((fn: (d: AppData) => AppData) => setData((d) => fn(d)), []);
-  const replace = useCallback((d: AppData) => setData({ ...EMPTY, ...d }), []);
+  const replace = useCallback((d: AppData) => setData(sanitize(d)), []);
   const workouts = useMemo(() => buildWorkouts(data.sets), [data.sets]);
 
   const value = useMemo(() => ({ data, workouts, loaded, update, replace }), [data, workouts, loaded, update, replace]);

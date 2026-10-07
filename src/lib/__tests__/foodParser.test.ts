@@ -46,3 +46,13 @@ describe("analyzeQuery", () => {
     expect(analyzeQuery("250 g keso")[0].food?.name).toMatch(/cottage cheese naturell/);
   });
 });
+
+describe("synonymer", () => {
+  it("är idempotenta och kräver inte lookbehind", async () => {
+    const { applySynonyms } = await import("../foodDb");
+    expect(applySynonyms("250 g keso")).toBe("250 g färskost cottage cheese");
+    expect(applySynonyms(applySynonyms("100 g råris"))).toBe("100 g ris råris");
+    expect(applySynonyms("kycklingfilé, nötfärs")).toBe("kyckling bröstfilé nöt färs");
+    expect(applySynonyms("osockrad keso")).toBe("osockrad färskost cottage cheese");
+  });
+});

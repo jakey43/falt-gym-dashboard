@@ -85,12 +85,13 @@ export function getFoodById(id: string): Food | undefined {
   return undefined;
 }
 
-// Ordgränser som fungerar med å, ä, ö och é (\b gör det inte).
-const w = (pattern: string) => new RegExp(`(?<!\\p{L})(?:${pattern})(?!\\p{L})`, "gu");
+// Ordgränser som fungerar med å, ä, ö och é (\b gör det inte). Undviker lookbehind
+// (?<!…) som äldre Safari inte stöder; tecknet före ordet fångas i grupp 1 i stället.
+const w = (pattern: string) => new RegExp(`(^|[^\\p{L}])(${pattern})(?=[^\\p{L}]|$)`, "gu");
 
 // Sammansatta ord och vardagsnamn -> databasens namngivning.
 const SYNONYMS: [RegExp, string][] = [
-  [w("kycklingfil[ée](er)?|kycklingbröst"), "kyckling bröstfilé"],
+  [w("kycklingfil[ée](?:er)?|kycklingbröst"), "kyckling bröstfilé"],
   [w("kycklinglår"), "kyckling lår"],
   [w("kycklingfärs"), "kyckling färs"],
   [w("nötfärs"), "nöt färs"],
@@ -100,11 +101,11 @@ const SYNONYMS: [RegExp, string][] = [
   [w("ryggbiff"), "nöt ryggbiff"],
   [w("entrecote|entrecôte"), "nöt entrecôte"],
   [w("laxfil[ée]"), "lax"],
-  [w("keso|(?<!färskost )cottage cheese"), "färskost cottage cheese"],
+  [w("keso|cottage cheese"), "färskost cottage cheese"],
   [w("kesella"), "kvarg"],
   [w("basmatiris"), "ris basmati"],
   [w("jasminris"), "ris jasmin"],
-  [w("fullkornsris|(?<!ris )råris"), "ris råris"],
+  [w("fullkornsris|råris"), "ris råris"],
   [w("fullkornspasta"), "pasta fullkorn"],
   [w("spaghetti|spagetti|makaroner|penne|fusilli"), "pasta"],
   [w("morötter"), "morot"],
@@ -127,7 +128,15 @@ const SYNONYMS: [RegExp, string][] = [
 
 export function applySynonyms(text: string): string {
   let out = normalize(text);
-  for (const [re, rep] of SYNONYMS) out = out.replace(re, rep);
+  for (const [re, rep] of SYNONYMS) {
+    out = out.replace(re, (whole, pre: string, word: string, offset: number, str: string) => {
+      // Redan omskrivet (t.ex. "ris råris")? Låt det vara så att funktionen tål att köras två gånger.
+      const before = str.slice(0, offset + pre.length);
+      const prefix = rep.endsWith(word) ? rep.slice(0, rep.length - word.length) : null;
+      if (prefix && before.endsWith(prefix)) return whole;
+      return pre + rep;
+    });
+  }
   return out;
 }
 
