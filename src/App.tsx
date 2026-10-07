@@ -20,7 +20,11 @@ const TABS = [
 
 function ScrollTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // Blockkropp: nyare webbläsare returnerar ett Promise från scrollTo, och React
+  // tolkar allt som returneras från en effect som en städfunktion.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return null;
 }
 
